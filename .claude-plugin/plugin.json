@@ -1,0 +1,79 @@
+{
+  "name": "timestamps",
+  "displayName": "Timestamps",
+  "version": "0.2.0",
+  "description": "Times on everything in the conversation, 'replied 14:07 · took 1m 48s' on each turn, and the time with each prompt so Claude knows how much time has passed.",
+  "author": {
+    "name": "Parag Pandya",
+    "url": "https://github.com/paragpandyareal"
+  },
+  "homepage": "https://github.com/paragpandyareal/claude-code-timestamps",
+  "repository": "https://github.com/paragpandyareal/claude-code-timestamps",
+  "license": "MIT",
+  "keywords": [
+    "timestamps",
+    "timestamp",
+    "time",
+    "clock",
+    "duration",
+    "time-aware",
+    "claude-code",
+    "transcript",
+    "mod"
+  ],
+  "userConfig": {
+    "format": {
+      "type": "string",
+      "title": "Hour format",
+      "description": "auto follows your system locale; or 12h / 24h",
+      "options": [
+        "auto",
+        "12h",
+        "24h"
+      ],
+      "default": "auto"
+    },
+    "style": {
+      "type": "string",
+      "title": "Style",
+      "description": "clock shows 14:05; relative shows 5m ago (today's messages only)",
+      "options": [
+        "clock",
+        "relative"
+      ],
+      "default": "clock"
+    },
+    "show": {
+      "type": "string",
+      "title": "Where times appear",
+      "description": "everything: under every row (your messages, Claude's replies, tool calls, command output). mine: under your own messages only",
+      "options": [
+        "everything",
+        "mine"
+      ],
+      "default": "everything"
+    },
+    "showDuration": {
+      "type": "boolean",
+      "title": "Show turn duration",
+      "description": "Add 'took 1m 48s' to each turn's closing line",
+      "default": true
+    },
+    "backfill": {
+      "type": "boolean",
+      "title": "Fill in older messages",
+      "description": "On /resume or /branch, read this session's own transcript file to show times for messages from before the mod loaded",
+      "default": true
+    },
+    "tellClaude": {
+      "type": "boolean",
+      "title": "Tell Claude the time",
+      "description": "Add one sentence beside each prompt, read by Claude only, saying when it was sent and how long since the previous message. Your words are never changed",
+      "default": true
+    }
+  },
+  "privacyPolicyUrl": "https://github.com/paragpandyareal/claude-code-timestamps/blob/main/PRIVACY.md",
+  "documentationUrl": "https://github.com/paragpandyareal/claude-code-timestamps#readme",
+  "supportUrl": "https://github.com/paragpandyareal/claude-code-timestamps/issues",
+  "termsOfServiceUrl": "https://github.com/paragpandyareal/claude-code-timestamps/blob/main/LICENSE"
+}

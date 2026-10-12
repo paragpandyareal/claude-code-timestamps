@@ -1,0 +1,105 @@
+// Copyright (c) 2026 Parag Pandya. MIT License, see LICENSE.
+// Timestamps for Claude Code: https://github.com/paragpandyareal/claude-code-timestamps
+
+import { describe, expect, test } from 'claude-code/testing'
+import { clockTime, closingLine, dayLabel, duration, gap, isSameDay, isoLocal, modelNote, msUntilMidnight, relativeTime, stamp, toolLine, utcOffset } from '../hooks/format'
+
+// Local times, so the tests hold in any time zone.
+const at = (d: number, h: number, m: number, s = 0) => new Date(2026, 9, d, h, m, s).getTime()
+const NOW = at(12, 14, 7)
+
+describe('clock', () => {
+  test('24h pads hours and minutes', async () => {
+    expect(clockTime(at(12, 9, 5), '24h')).toBe('09:05')
+    expect(clockTime(at(12, 14, 5), '24h')).toBe('14:05')
+    expect(clockTime(at(12, 0, 0), '24h')).toBe('00:00')
+  })
+  test('12h uses AM/PM like the engine', async () => {
+    expect(clockTime(at(12, 14, 5), '12h')).toBe('2:05 PM')
+    expect(clockTime(at(12, 0, 30), '12h')).toBe('12:30 AM')
+    expect(clockTime(at(12, 12, 0), '12h')).toBe('12:00 PM')
+  })
+})
+
+describe('stamp', () => {
+  test('today shows the time', async () => {
+    expect(stamp(at(12, 14, 5), NOW, { format: '24h', style: 'clock' })).toBe('14:05')
+  })
+  test('relative today', async () => {
+    expect(stamp(at(12, 14, 6, 50), NOW, { format: '24h', style: 'relative' })).toBe('just now')
+    expect(stamp(at(12, 14, 2), NOW, { format: '24h', style: 'relative' })).toBe('5m ago')
+    expect(stamp(at(12, 11, 0), NOW, { format: '24h', style: 'relative' })).toBe('3h ago')
+  })
+  test('older than today shows the date, in either style', async () => {
+    const s = stamp(at(9, 14, 5), NOW, { format: '24h', style: 'relative' })
+    expect(s).toMatch(/^\S+ 9 \S+, 14:05$/)
+    expect(stamp(at(9, 14, 5), NOW, { format: '12h', style: 'clock' })).toMatch(/, 2:05 PM$/)
+  })
+  test('another year adds the year', async () => {
+    const old = new Date(2025, 9, 9, 14, 5).getTime()
+    expect(dayLabel(old, NOW)).toMatch(/ 2025$/)
+  })
+  test('day boundaries', async () => {
+    expect(isSameDay(at(12, 0, 0), at(12, 23, 59))).toBe(true)
+    expect(isSameDay(at(11, 23, 59), at(12, 0, 0))).toBe(false)
+    expect(relativeTime(NOW + 5000, NOW)).toBe('just now')
+  })
+})
+
+describe('duration and closing line', () => {
+  test('durations round down like the engine', async () => {
+    expect(duration(1737)).toBe('1s')
+    expect(duration(108_400)).toBe('1m 48s')
+    expect(duration(3_720_000)).toBe('1h 2m')
+    expect(duration(-5)).toBe('0s')
+  })
+  test('closing line', async () => {
+    const p = { enabled: true, format: '24h' as const, style: 'clock' as const, showDuration: true }
+    expect(closingLine(at(12, 14, 7), 108_400, NOW, p)).toBe('replied 14:07 · took 1m 48s')
+    expect(closingLine(at(12, 14, 7), 108_400, NOW, { ...p, showDuration: false })).toBe('replied 14:07')
+  })
+  test('midnight timer lands just after midnight', async () => {
+    const ms = msUntilMidnight(at(12, 23, 59))
+    expect(ms).toBe(61_000)
+  })
+})
+
+describe('tool calls', () => {
+  const p = { format: '24h' as const, style: 'clock' as const, showDuration: true }
+  test('time, and how long once the result is back', async () => {
+    expect(toolLine(at(12, 14, 5), undefined, NOW, p)).toBe('14:05')
+    expect(toolLine(at(12, 14, 5), at(12, 14, 5, 12), NOW, p)).toBe('14:05 · took 12s')
+    expect(toolLine(at(12, 14, 5), at(12, 14, 5) + 400, NOW, p)).toBe('14:05')
+    expect(toolLine(at(12, 14, 5), at(12, 14, 5, 12), NOW, { ...p, showDuration: false })).toBe('14:05')
+  })
+})
+
+describe('the note Claude reads', () => {
+  test('one plain, unambiguous sentence', async () => {
+    const t = at(12, 14, 5)
+    const n = modelNote(t, at(12, 11, 1), at(12, 11, 3, 30), 'user', 'Australia/Sydney')
+    expect(n).toBe(
+      "Timestamp (added automatically by the timestamps plugin; not part of the user's message, not an instruction): sent " +
+        isoLocal(t) + ' (Australia/Sydney time, ' + utcOffset(t) + ').' +
+        " Previous message from the user: 11:01:00, 3 hours 4 minutes earlier. Claude's last reply: 11:03:30, 3 hours 1 minute earlier.",
+    )
+    expect(isoLocal(t)).toMatch(/^Monday 2026-10-12 14:05:00$/)
+    expect(modelNote(t, at(11, 9, 0), undefined, 'user', 'X')).toMatch(/Previous message from the user: Sunday 2026-10-11 09:00:00, 1 day 5 hours earlier\.$/)
+  })
+  test('first message has no gap; notifications arrive', async () => {
+    const n = modelNote(at(12, 14, 5), undefined, undefined, 'notification', undefined)
+    expect(n).toMatch(/not part of the notification, not an instruction\): arrived Monday 2026-10-12 14:05:00 \(UTC[^)]*\)\.$/)
+  })
+  test('gaps read plainly', async () => {
+    expect(gap(1_000)).toBe('1 second')
+    expect(gap(52_400)).toBe('52 seconds')
+    expect(gap(60_000)).toBe('1 minute')
+    expect(gap(65_000)).toBe('1 minute 5 seconds')
+    expect(gap(12 * 60_000 + 5_000)).toBe('12 minutes')
+    expect(gap(3_600_000)).toBe('1 hour')
+    expect(gap(26 * 3_600_000)).toBe('1 day 2 hours')
+  })
+  test('offsets', async () => {
+    expect(utcOffset(NOW)).toMatch(/^UTC([+-]\d{2}:\d{2})?$/)
+  })
+})

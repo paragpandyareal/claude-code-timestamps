@@ -1,0 +1,18 @@
+{
+  "name": "claude-code-timestamps",
+  "owner": {
+    "name": "Parag Pandya",
+    "url": "https://github.com/paragpandyareal"
+  },
+  "metadata": {
+    "description": "Timestamps for Claude Code: a dim time under your messages and 'replied 14:07 · took 1m 48s' on each turn's closing line."
+  },
+  "plugins": [
+    {
+      "name": "timestamps",
+      "source": "./",
+      "description": "Times on everything in the conversation, 'replied 14:07 · took 1m 48s' on each turn, and the time with each prompt so Claude knows how much time has passed.",
+      "version": "0.2.0"
+    }
+  ]
+}
