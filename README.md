@@ -108,6 +108,8 @@ Or, in two steps:
 
 **Needs Claude Code v2.1.287 or later** (run `claude --version`). Nothing else to install.
 
+If Claude Code says *userConfig options not yet set*, that's fine: every option has a default (below), and you can change them later.
+
 ## Use it
 
 | To… | Type |
