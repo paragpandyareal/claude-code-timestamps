@@ -4,7 +4,7 @@
 // What the mod keeps in $.store, and how it stays small. Pure: no $ here.
 //
 //   prefs        what /timestamps last set (overrides the userConfig defaults)
-//   s:<session>  { u: last write, p: transcript path, lu/lr: last prompt and reply,
+//   s:<session>  { u: last write, p: transcript path, lu: last prompt,
 //                  m: { rowId: epoch ms } }
 //
 // One key per session, so two sessions running at once never write the same key.
@@ -16,8 +16,8 @@ export const SESSION_PREFIX = 's:'
 
 export type StoredPrefs = { enabled?: boolean; format?: HourFormat; style?: Style; show?: Show }
 
-/** `lu` and `lr`: the user's last prompt and Claude's last reply, for Claude's note. */
-export type SessionRecord = { u: number; p?: string; lu?: number; lr?: number; m: Record<string, number> }
+/** `lu`: the user's last prompt, for the gap in Claude's note. */
+export type SessionRecord = { u: number; p?: string; lu?: number; m: Record<string, number> }
 
 /** Prune limits: well under the store's 4 MiB. */
 export const LIMITS = {
@@ -48,7 +48,6 @@ export function readRecord(v: unknown): SessionRecord | undefined {
   for (const [k, t] of Object.entries(o.m as Record<string, unknown>)) if (typeof t === 'number') m[k] = t
   const rec: SessionRecord = { u: o.u, p: typeof o.p === 'string' ? o.p : undefined, m }
   if (typeof o.lu === 'number') rec.lu = o.lu
-  if (typeof o.lr === 'number') rec.lr = o.lr
   return rec
 }
 

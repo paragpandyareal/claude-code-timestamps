@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 (2026-10-12)
+
+- **A much shorter note for Claude: about 22 tokens a prompt instead of about 80** (20 prompts: about 450 tokens instead of 1,600). It now reads `Timestamp (timestamps plugin, not the user): Mon 2026-10-12 17:21:03 +11:00.`
+- Your time zone's name is sent once per session (and again after compaction), not on every prompt.
+- The gap since your previous message is added only when it's 10 minutes or more (`3h 16m after the user's previous message.`). The gap since Claude's last reply is gone.
+- Checked live: Claude still answers the time and the gap exactly, and says the plugin added the line.
+
 ## 0.2.0 (2026-10-12)
 
 - **Times on everything.** A dim time under each block of Claude's reply, each tool call and collapsed group of calls (with how long they took: `14:05 · took 3s`), command output, and notifications. New option *Where times appear* (`show`: `everything`, the default, or `mine`) and `/timestamps all` / `/timestamps mine`. Replaces the `showOnToolCalls` option.

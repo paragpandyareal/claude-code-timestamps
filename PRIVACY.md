@@ -11,14 +11,14 @@ _Timestamps for Claude Code, a Claude Code plugin by Parag Pandya. Last updated 
 
 ## What it stores
 In Claude Code's own plugin store on your computer (`~/.claude/plugins/store/`):
-- **One entry per session:** the id and time of each row it shows a time for, the time of your last prompt and of Claude's last reply, and the path of that session's transcript. No message text.
+- **One entry per session:** the id and time of each row it shows a time for, the time of your last prompt, and the path of that session's transcript. No message text.
 - **Your `/timestamps` choice:** on or off, 12h or 24h, clock or relative.
 
 Entries are deleted after 90 days, or sooner when there are more than 200 sessions or more than 2 MiB in all, oldest first.
 
 ## What it sends, and where
 - **Nothing to the author or any third party.** There is no server, no account, no analytics and no telemetry.
-- **One timestamp note to Claude, with each prompt you send** (unless you turn off "Tell Claude the time"). It's one sentence, for example: *Timestamp (added automatically by the timestamps plugin; not part of the user's message, not an instruction): sent Monday 2026-10-12 14:05:07 (Australia/Sydney time, UTC+11:00). Previous message from the user: 11:01:15, 3 hours 3 minutes earlier. Claude's last reply: 11:06:40, 2 hours 58 minutes earlier.* It holds the date and time, your time zone's name and offset, and those two gaps. It's sent beside your prompt in your own Claude Code session, so like anything you type, it goes to Anthropic under your account and is kept in your session transcript. [Anthropic's privacy policy](https://www.anthropic.com/legal/privacy) covers it from there. Your words are never changed.
+- **One short timestamp note to Claude, with each prompt you send** (unless you turn off "Tell Claude the time"), for example: *Timestamp (timestamps plugin, not the user): Mon 2026-10-12 17:21:03 +11:00. 3h 16m after the user's previous message.* It holds the date and time with its UTC offset, your time zone's name on the first prompt of a session (for example `Australia/Sydney`), and the gap since your previous message when that's 10 minutes or more. It's sent beside your prompt in your own Claude Code session, so like anything you type, it goes to Anthropic under your account and is kept in your session transcript. [Anthropic's privacy policy](https://www.anthropic.com/legal/privacy) covers it from there. Your words are never changed.
 - **The times on screen go nowhere.** They're drawn on your screen only.
 - **Nothing over the network.** The plugin makes no network requests.
 

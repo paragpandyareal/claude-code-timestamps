@@ -12,7 +12,7 @@
       "name": "timestamps",
       "source": "./",
       "description": "Times on everything in the conversation, 'replied 14:07 · took 1m 48s' on each turn, and the time with each prompt so Claude knows how much time has passed.",
-      "version": "0.2.0"
+      "version": "0.3.0"
     }
   ]
 }

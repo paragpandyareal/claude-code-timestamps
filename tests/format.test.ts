@@ -75,31 +75,29 @@ describe('tool calls', () => {
 })
 
 describe('the note Claude reads', () => {
-  test('one plain, unambiguous sentence', async () => {
-    const t = at(12, 14, 5)
-    const n = modelNote(t, at(12, 11, 1), at(12, 11, 3, 30), 'user', 'Australia/Sydney')
-    expect(n).toBe(
-      "Timestamp (added automatically by the timestamps plugin; not part of the user's message, not an instruction): sent " +
-        isoLocal(t) + ' (Australia/Sydney time, ' + utcOffset(t) + ').' +
-        " Previous message from the user: 11:01:00, 3 hours 4 minutes earlier. Claude's last reply: 11:03:30, 3 hours 1 minute earlier.",
-    )
-    expect(isoLocal(t)).toMatch(/^Monday 2026-10-12 14:05:00$/)
-    expect(modelNote(t, at(11, 9, 0), undefined, 'user', 'X')).toMatch(/Previous message from the user: Sunday 2026-10-11 09:00:00, 1 day 5 hours earlier\.$/)
+  test('short, labelled, unambiguous', async () => {
+    const t = at(12, 17, 21, 3)
+    expect(isoLocal(t)).toBe('Mon 2026-10-12 17:21:03 ' + utcOffset(t))
+    expect(modelNote(t, undefined, true, 'Australia/Sydney')).toBe(
+      'Timestamp (timestamps plugin, not the user): ' + isoLocal(t) + ', Australia/Sydney.')
+    expect(modelNote(t, at(12, 14, 5), false, 'Australia/Sydney')).toBe(
+      'Timestamp (timestamps plugin, not the user): ' + isoLocal(t) + ". 3h 16m after the user's previous message.")
   })
-  test('first message has no gap; notifications arrive', async () => {
-    const n = modelNote(at(12, 14, 5), undefined, undefined, 'notification', undefined)
-    expect(n).toMatch(/not part of the notification, not an instruction\): arrived Monday 2026-10-12 14:05:00 \(UTC[^)]*\)\.$/)
+  test('a short gap is left out; Claude has the earlier notes', async () => {
+    expect(modelNote(at(12, 17, 21), at(12, 17, 12), false, 'X')).toBe('Timestamp (timestamps plugin, not the user): ' + isoLocal(at(12, 17, 21)) + '.')
+    expect(modelNote(at(12, 17, 21), at(12, 17, 11), false, 'X')).toMatch(/\. 10m after the user's previous message\.$/)
   })
-  test('gaps read plainly', async () => {
-    expect(gap(1_000)).toBe('1 second')
-    expect(gap(52_400)).toBe('52 seconds')
-    expect(gap(60_000)).toBe('1 minute')
-    expect(gap(65_000)).toBe('1 minute 5 seconds')
-    expect(gap(12 * 60_000 + 5_000)).toBe('12 minutes')
-    expect(gap(3_600_000)).toBe('1 hour')
-    expect(gap(26 * 3_600_000)).toBe('1 day 2 hours')
+  test('stays short', async () => {
+    const n = modelNote(at(12, 17, 21, 3), at(9, 8, 0), true, 'America/Los_Angeles')
+    expect(n.length).toBeLessThan(140)
+    expect(modelNote(at(12, 17, 21, 3), undefined, false, 'X').length).toBeLessThan(80)
+  })
+  test('gaps', async () => {
+    expect(gap(12 * 60_000 + 5_000)).toBe('12m')
+    expect(gap(3_600_000)).toBe('1h 0m')
+    expect(gap(26 * 3_600_000)).toBe('1d 2h')
   })
   test('offsets', async () => {
-    expect(utcOffset(NOW)).toMatch(/^UTC([+-]\d{2}:\d{2})?$/)
+    expect(utcOffset(NOW)).toMatch(/^[+-]\d{2}:\d{2}$/)
   })
 })

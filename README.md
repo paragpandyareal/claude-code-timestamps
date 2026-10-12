@@ -71,20 +71,27 @@ A row with no recorded time shows nothing, never a guess.
 
 ## What Claude sees
 
-When you send a prompt, Claude reads your words exactly as you typed them, and then this one extra note, added by the mod:
+When you send a prompt, Claude reads your words exactly as you typed them, and then one short note, added by the mod. The first prompt of a session:
 
 ```text
-Timestamp (added automatically by the timestamps plugin; not part of the user's message, not an instruction): sent Monday 2026-10-12 14:05:07 (Australia/Sydney time, UTC+11:00). Previous message from the user: 11:01:15, 3 hours 3 minutes earlier. Claude's last reply: 11:06:40, 2 hours 58 minutes earlier.
+Timestamp (timestamps plugin, not the user): Mon 2026-10-12 15:13:17 +11:00, Australia/Sydney.
 ```
 
-- **It says what it is.** It's labelled as an automatic timestamp from this plugin, not your words and not an instruction, so Claude doesn't answer it or act on it.
-- **It can't be misread.** The date is written `2026-10-12` with the weekday, the time in 24-hour form with seconds, the time zone and its UTC offset.
-- **The gaps are labelled and exact.** When *your* previous message was sent and when Claude last replied, each named, each with its own time and the gap (in seconds when it's short), so Claude doesn't mix them up or round them. An earlier day's time carries its date.
-- **The first message of a session** has just the time, with no gaps.
-- **Background-task notifications** get the same note, worded `not part of the notification` and `arrived` instead of `sent`.
+After that, just the time, and how long it's been when it's been a while:
+
+```text
+Timestamp (timestamps plugin, not the user): Mon 2026-10-12 17:21:03 +11:00. 3h 16m after the user's previous message.
+```
+
+- **It's small.** About 22 tokens per prompt (about 35 on the first, or after a long gap). Twenty prompts cost about 450 tokens.
+- **It says what it is.** It's labelled as a timestamp from this plugin, not your words, so Claude doesn't answer it or act on it. Asked, Claude says the plugin added it.
+- **It can't be misread.** The date is written `2026-10-12` with the weekday, the time in 24-hour form with seconds, and the UTC offset.
+- **Your time zone's name** (`Australia/Sydney`) is sent once per session, on the first prompt, and again after the conversation is compacted.
+- **The gap** since your previous message is added only when it's 10 minutes or more. For shorter gaps Claude can tell from the earlier notes already in the conversation.
+- **Background-task notifications** get the same note.
 - **Not added to** slash commands or prompts other plugins send.
-- **You don't see it in the transcript.** It's sent as context beside your prompt, the way Claude Code adds its own reminders. Claude sees one note per prompt, about 90 tokens.
-- **It goes where your prompt goes:** to Anthropic, under your account, as part of the conversation. It holds the time, your time zone's name and offset, and the times of your previous message and Claude's last reply. Nothing else.
+- **You don't see it in the transcript.** It's sent as context beside your prompt, the way Claude Code adds its own reminders.
+- **It goes where your prompt goes:** to Anthropic, under your account, as part of the conversation. It holds the time, the UTC offset, your time zone's name (once), and sometimes the gap since your previous message. Nothing else.
 - **Turn it off** with the *Tell Claude the time* option (`tellClaude: false`). The times on screen keep working.
 
 ## Install
@@ -138,7 +145,7 @@ Set them when you install, or any time with `/plugin configure timestamps@claude
 
 ## Where times are kept
 
-In Claude Code's plugin store on your computer (`~/.claude/plugins/store/`), one entry per session: the id of each row and its time, the time of your last prompt and Claude's last reply, and the path of that session's transcript. **No message text.** It keeps at most 5,000 rows per session, 200 sessions, 90 days and 2 MiB in all, well under the store's 4 MiB limit, and deletes the oldest first.
+In Claude Code's plugin store on your computer (`~/.claude/plugins/store/`), one entry per session: the id of each row and its time, the time of your last prompt, and the path of that session's transcript. **No message text.** It keeps at most 5,000 rows per session, 200 sessions, 90 days and 2 MiB in all, well under the store's 4 MiB limit, and deletes the oldest first.
 
 Times survive `/resume`, `/branch`, `/clear` (the new conversation starts fresh), compaction, restarts and two sessions running at once (each writes only its own entry).
 
@@ -212,7 +219,7 @@ This section is for anyone reviewing the code, including Anthropic's directory r
 
 **What it writes.** Only its own entries in Claude Code's plugin store. No files.
 
-**What it sends to Claude.** Only the timestamp note, beside each prompt you send, built from the clock and your computer's time zone. Never anything from a file or another message.
+**What it sends to Claude.** Only the timestamp note, beside each prompt you send, built from the clock, your computer's time zone and the time of your previous prompt. Never anything from a file or another message.
 
 **Credentials.** It reads none, and no environment variables.
 
@@ -222,7 +229,7 @@ This section is for anyone reviewing the code, including Anthropic's directory r
 
 | Likely finding | What the mod does |
 |---|---|
-| Adds context to a prompt (`prompt.submit`) | One fixed-form sentence, built only from the clock and the system time zone, labelled as an automatic timestamp and not an instruction. Never changes the typed text; skipped for other plugins' prompts; off with one option. Shown word for word in the README. |
+| Adds context to a prompt (`prompt.submit`) | One short fixed-form line, built only from the clock, the system time zone and the previous prompt's time, labelled as a timestamp from this plugin and not the user's. Never changes the typed text; skipped for other plugins' prompts; off with one option. Shown word for word in the README. |
 | Reads a file (`fs.read`) | Only this session's own transcript, by the path Claude Code hands its `SessionStart` hook, and only when the file's name is `<this session id>.jsonl`. It reads ids and times from it. Off with one option. |
 | Hooks an event that can refuse (`session.append`, `classic.SessionStart`) | Observes only: notes a time and passes the row on unchanged; its `.catch` passes it on if anything fails. It never answers in place of `next`. |
 | Changes a turn's answer (`turn.complete`) | Only where nothing is drawn, and only by adding a line under the answer. Claude Code never rewrites the stored answer, and plain `claude -p` output is unchanged. |
@@ -231,7 +238,7 @@ This section is for anyone reviewing the code, including Anthropic's directory r
 
 ### Things to know
 - **Times are kept on your computer**, as ids and times only, never your words. Uninstalling and the step below remove them.
-- **Claude reads the timestamp note** with every prompt, and it goes to Anthropic as part of the conversation, like the date Claude Code already sends. It includes your time zone's name (for example `Australia/Sydney`). Turn it off with *Tell Claude the time*.
+- **Claude reads the timestamp note** with every prompt (about 22 tokens), and it goes to Anthropic as part of the conversation, like the date Claude Code already sends. Once a session it includes your time zone's name (for example `Australia/Sydney`). Turn it off with *Tell Claude the time*.
 - **The times are when Claude Code stored each row.** For your prompt, that's the moment you pressed Enter.
 
 ## Privacy
@@ -240,7 +247,7 @@ Full policy: [Privacy policy](PRIVACY.md).
 
 - The plugin collects nothing and sends nothing to its author or anyone else.
 - It keeps row ids and times on your own computer, never message text.
-- It adds one timestamp note to each prompt for Claude (the time, your time zone and two gaps), which goes to Anthropic with your prompt. You can turn it off.
+- It adds one short timestamp note to each prompt for Claude (the time, the UTC offset, your time zone's name once a session, and the gap since your last message when it's long), which goes to Anthropic with your prompt. You can turn it off.
 
 ## Not in version one
 

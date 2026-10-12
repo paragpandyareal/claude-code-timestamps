@@ -31,13 +31,12 @@ export function timesFromTranscript(text: string): Map<string, number> {
   return readTranscript(text).times
 }
 
-export type TranscriptTimes = { times: Map<string, number>; lastUser?: number; lastReply?: number }
+export type TranscriptTimes = { times: Map<string, number>; lastUser?: number }
 
-/** The times, and when the person last typed and Claude last answered. */
+/** The times, and when the person last typed. */
 export function readTranscript(text: string): TranscriptTimes {
   const out = new Map<string, number>()
   let lastUser: number | undefined
-  let lastReply: number | undefined
   let start = 0
   while (start < text.length) {
     let end = text.indexOf('\n', start)
@@ -62,9 +61,8 @@ export function readTranscript(text: string): TranscriptTimes {
     } else if (line.type === 'system' && line.subtype === 'turn_duration') out.set(line.uuid, t)
     else if (line.type === 'assistant') {
       out.set(line.uuid, t)
-      if (lastReply === undefined || t > lastReply) lastReply = t
       for (const b of blocks) if (b && b.type === 'tool_use' && typeof b.id === 'string') out.set(b.id, t)
     }
   }
-  return { times: out, lastUser, lastReply }
+  return { times: out, lastUser }
 }

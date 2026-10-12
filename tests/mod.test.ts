@@ -193,7 +193,7 @@ describe('options and /timestamps', () => {
 describe('what Claude reads', () => {
   const submit = ($: any, kind: string, text = 'hello') => $.prompt.submit({ text, wait: false, origin: { kind } })
 
-  test('a timestamp sentence beside my prompt; my words unchanged', async ($, on) => {
+  test('a short timestamp beside my prompt; my words unchanged; zone named once', async ($, on) => {
     const seen: any[] = []
     world(on)
     on('prompt.submit', async (_$, e) => (seen.push(e), { text: e.text, context: e.context }) as never)
@@ -201,20 +201,19 @@ describe('what Claude reads', () => {
     await submit($, 'composer', 'fix the test')
     expect(seen[0].text).toBe('fix the test')
     expect(seen[0].context).toHaveLength(1)
-    expect(seen[0].context[0]).toMatch(/^Timestamp \(added automatically by the timestamps plugin; not part of the user's message, not an instruction\): sent \w+day \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \(.*UTC.*\)\.$/)
-    await reply($, 'a-9')
+    expect(seen[0].context[0]).toMatch(/^Timestamp \(timestamps plugin, not the user\): \w{3} \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [+-]\d{2}:\d{2}(, [\w/+-]+)?\.$/)
     await submit($, 'composer', 'again')
-    expect(seen[1].context[0]).toMatch(/\. Previous message from the user: \d{2}:\d{2}:\d{2}, \d+ seconds? earlier\. Claude's last reply: \d{2}:\d{2}:\d{2}, \d+ seconds? earlier\.$/)
+    expect(seen[1].context[0]).toMatch(/^Timestamp \(timestamps plugin, not the user\): \w{3} \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [+-]\d{2}:\d{2}\.$/)
   })
 
-  test('notifications are labelled as notifications; other plugins\' prompts get nothing', async ($, on) => {
+  test('notifications get the note too; other plugins\' prompts get nothing', async ($, on) => {
     const seen: any[] = []
     world(on)
     on('prompt.submit', async (_$, e) => (seen.push(e), { text: e.text, context: e.context }) as never)
     await start($)
     await submit($, 'task-notification')
     await submit($, 'plugin')
-    expect(seen[0].context[0]).toMatch(/not part of the notification, not an instruction\): arrived /)
+    expect(seen[0].context[0]).toMatch(/^Timestamp \(timestamps plugin, not the user\): /)
     expect(seen[1].context).toBe(undefined)
   })
 

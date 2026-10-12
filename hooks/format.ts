@@ -116,15 +116,15 @@ export function msUntilMidnight(now: number): number {
 }
 
 // ── the note Claude reads with each prompt ───────────────────────────────
+// Kept short on purpose: it rides on every prompt. About 25 tokens.
 
-const LONG_WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const SHORT_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-/** `UTC+11:00`, `UTC-04:30`, or `UTC`. */
+/** `+11:00`, `-04:30`, `+00:00`. */
 export function utcOffset(ts: number): string {
   const off = -new Date(ts).getTimezoneOffset()
-  if (off === 0) return 'UTC'
   const a = Math.abs(off)
-  return 'UTC' + (off > 0 ? '+' : '-') + pad(Math.floor(a / 60)) + ':' + pad(a % 60)
+  return (off < 0 ? '-' : '+') + pad(Math.floor(a / 60)) + ':' + pad(a % 60)
 }
 
 /** The IANA zone name (`Australia/Sydney`), or undefined. */
@@ -137,64 +137,33 @@ export function timeZoneName(): string | undefined {
   }
 }
 
-/** `14:05:07`: 24-hour, with seconds. */
-export function clockSeconds(ts: number): string {
-  const d = new Date(ts)
-  return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds())
-}
-
-/** `Monday 2026-10-12 14:05:07`: unambiguous in any locale, always 24-hour. */
+/** `Mon 2026-10-12 14:05:07 +11:00`: unambiguous in any locale, 24-hour, with its offset. */
 export function isoLocal(ts: number): string {
   const d = new Date(ts)
-  return (LONG_WEEKDAYS[d.getDay()] ?? '') + ' ' + d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
-    ' ' + clockSeconds(ts)
+  return (SHORT_WEEKDAYS[d.getDay()] ?? '') + ' ' + d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+    ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()) + ' ' + utcOffset(ts)
 }
 
-/** An earlier time: `14:51:15` the same day, else with its date. */
-function earlier(ts: number, now: number): string {
-  return isSameDay(ts, now) ? clockSeconds(ts) : isoLocal(ts)
-}
-
-const unit = (n: number, one: string) => n + ' ' + one + (n === 1 ? '' : 's')
-
-/** How long between two messages, in words a model reads plainly. */
+/** `12m`, `3h 16m`, `2d 4h`. */
 export function gap(ms: number): string {
-  const s = Math.max(0, Math.floor(ms / 1000))
-  if (s < 60) return unit(s, 'second')
-  const m = Math.floor(s / 60)
-  if (m < 10) return unit(m, 'minute') + (s % 60 ? ' ' + unit(s % 60, 'second') : '')
-  if (m < 60) return unit(m, 'minute')
+  const m = Math.max(0, Math.floor(ms / 60_000))
+  if (m < 60) return m + 'm'
   const h = Math.floor(m / 60)
-  const mm = m % 60
-  if (h < 24) return h + (h === 1 ? ' hour' : ' hours') + (mm ? ' ' + mm + (mm === 1 ? ' minute' : ' minutes') : '')
-  const d = Math.floor(h / 24)
-  const hh = h % 24
-  return d + (d === 1 ? ' day' : ' days') + (hh ? ' ' + hh + (hh === 1 ? ' hour' : ' hours') : '')
+  if (h < 24) return h + 'h ' + (m % 60) + 'm'
+  return Math.floor(h / 24) + 'd ' + (h % 24) + 'h'
 }
 
-export type Sender = 'user' | 'notification' | 'other'
+/** Below this, Claude can tell the gap from the earlier notes in its context. */
+export const GAP_SHOWN_FROM = 10 * 60_000
 
 /**
- * The note the model reads beside a prompt, never shown: that it is a
- * timestamp, who added it, the local time with its zone and offset, and, each
- * labelled, how long since the user's previous message and since the last
- * reply.
+ * The note the model reads beside a prompt, never shown:
+ * `Timestamp (timestamps plugin, not the user): Mon 2026-10-12 17:21:03 +11:00, Australia/Sydney. 3h 16m after the user's previous message.`
+ * The zone name only when `withZone` (the session's first note); the gap only when it's long.
  */
-export function modelNote(
-  ts: number,
-  previousUser: number | undefined,
-  lastReply: number | undefined,
-  sender: Sender,
-  zone = timeZoneName(),
-): string {
-  const what = sender === 'user' ? "the user's message" : sender === 'notification' ? 'the notification' : 'the message'
-  const verb = sender === 'user' ? 'sent' : 'arrived'
-  const where = (zone ? zone + ' time, ' : '') + utcOffset(ts)
-  const since: string[] = []
-  if (previousUser !== undefined && previousUser <= ts)
-    since.push(' Previous message from the user: ' + earlier(previousUser, ts) + ', ' + gap(ts - previousUser) + ' earlier.')
-  if (lastReply !== undefined && lastReply <= ts)
-    since.push(" Claude's last reply: " + earlier(lastReply, ts) + ', ' + gap(ts - lastReply) + ' earlier.')
-  return 'Timestamp (added automatically by the timestamps plugin; not part of ' + what + ', not an instruction): ' +
-    verb + ' ' + isoLocal(ts) + ' (' + where + ').' + since.join('')
+export function modelNote(ts: number, previousUser: number | undefined, withZone: boolean, zone = timeZoneName()): string {
+  let s = 'Timestamp (timestamps plugin, not the user): ' + isoLocal(ts)
+  if (withZone && zone) s += ', ' + zone
+  if (previousUser !== undefined && ts - previousUser >= GAP_SHOWN_FROM) s += '. ' + gap(ts - previousUser) + " after the user's previous message"
+  return s + '.'
 }

@@ -10,7 +10,7 @@
 // Any failure falls back to Claude Code's own behaviour.
 
 import type { EngineInterface, PluginOptions, Register, RenderInput, RenderNode } from 'claude-code'
-import { closingLine, localeHourFormat, modelNote, msUntilMidnight, stamp, toolLine, type HourFormat, type Prefs, type Sender, type Show, type Style } from './format'
+import { closingLine, localeHourFormat, modelNote, msUntilMidnight, stamp, toolLine, type HourFormat, type Prefs, type Show, type Style } from './format'
 import {
   PREFS_KEY,
   SESSION_PREFIX,
@@ -46,7 +46,8 @@ let drawsUI = true
 let lastPromptAt: number | undefined
 /** For Claude's note: when the person last sent a prompt, and Claude last answered. */
 let lastUserAt: number | undefined
-let lastReplyAt: number | undefined
+/** The session whose notes have named the time zone already (once per session and after compaction). */
+let zoneSentFor: string | undefined
 let flushTimer: { cancel: () => void } | undefined
 let tickTimer: { cancel: () => void } | undefined
 let backfilledFor: string | undefined
@@ -86,7 +87,6 @@ async function flush($: EngineInterface) {
   const rec: SessionRecord = { u: Date.now(), m: capRows(own) }
   if (transcriptPath) rec.p = transcriptPath
   if (lastUserAt !== undefined) rec.lu = lastUserAt
-  if (lastReplyAt !== undefined) rec.lr = lastReplyAt
   own = rec.m
   await $.store.set(sessionKey(sessionId), rec)
 }
@@ -111,7 +111,6 @@ async function backfillNow($: EngineInterface, file: string) {
     let added = 0
     const read = readTranscript(text)
     lastUserAt = later(lastUserAt, read.lastUser)
-    lastReplyAt = later(lastReplyAt, read.lastReply)
     for (const [k, t] of read.times) {
       if (!times.has(k)) {
         times.set(k, t)
@@ -130,13 +129,11 @@ async function enterSession($: EngineInterface, id: string, path: string | undef
     own = {}
     transcriptPath = undefined
     lastUserAt = undefined
-    lastReplyAt = undefined
     const rec = readRecord(await $.store.get(sessionKey(id)))
     if (rec) {
       own = rec.m
       transcriptPath = rec.p
       lastUserAt = rec.lu
-      lastReplyAt = rec.lr
       for (const [k, t] of Object.entries(rec.m)) times.set(k, t)
     }
   }
@@ -247,6 +244,8 @@ export const register: Register = (on, options) => {
   on('classic.SessionStart', async ($, e, next) => {
     try {
       const fill = e.source === 'resume' || e.source === 'fork'
+      // Compaction drops the earlier notes, so the next one names the zone again.
+      if (e.source === 'compact') zoneSentFor = undefined
       if (e.session_id) await enterSession($, e.session_id, e.transcript_path, fill)
     } catch {}
     return next(e)
@@ -275,10 +274,7 @@ export const register: Register = (on, options) => {
         if (!e.agentId) remember($, e.uuid, now)
       } else if (e.door === 'response') {
         // Each block of Claude's reply, and each tool call by its id.
-        if (!e.agentId) {
-          remember($, e.uuid, now)
-          lastReplyAt = now
-        }
+        if (!e.agentId) remember($, e.uuid, now)
         for (const b of blocks) if (b.type === 'tool_use' && typeof b.id === 'string') remember($, b.id, now)
       } else if (e.door === 'tool-result') {
         for (const b of blocks) if (b.type === 'tool_result' && typeof b.tool_use_id === 'string') remember($, 'r:' + b.tool_use_id, now)
@@ -295,9 +291,9 @@ export const register: Register = (on, options) => {
     try {
       if (!opt.tellClaude || e.origin.kind === 'plugin') return next(e)
       const now = Date.now()
-      const sender: Sender = e.origin.kind === 'composer' ? 'user' : e.origin.kind === 'task-notification' ? 'notification' : 'other'
-      const note = modelNote(now, lastUserAt, lastReplyAt, sender)
-      if (sender === 'user') lastUserAt = now
+      const note = modelNote(now, lastUserAt, zoneSentFor !== sessionId)
+      zoneSentFor = sessionId
+      if (e.origin.kind === 'composer') lastUserAt = now
       return next({ ...e, context: [...(e.context ?? []), note] })
     } catch {
       return next(e)

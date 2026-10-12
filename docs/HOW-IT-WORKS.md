@@ -33,9 +33,9 @@ The only thing Claude reads from the mod is the note added at `prompt.submit`. T
 | File | What it does |
 |---|---|
 | `hooks/register.ts` | **Everything that touches `$`:** the hooks, the store, the transcript read, timers, `/timestamps`, the drawing. A mod may hand `$` only to functions declared in the same file, so these all live here. |
-| `hooks/format.ts` | **Pure:** `14:05` / `2:05 PM`, `5m ago`, `Mon 9 Oct, 14:05`, `1m 48s`, the closing line, tool lines, the system's 12h/24h choice, time to midnight, and Claude's note (`modelNote`: ISO-style local date and time, zone, UTC offset, labelled gaps) |
+| `hooks/format.ts` | **Pure:** `14:05` / `2:05 PM`, `5m ago`, `Mon 9 Oct, 14:05`, `1m 48s`, the closing line, tool lines, the system's 12h/24h choice, time to midnight, and Claude's note (`modelNote`) |
 | `hooks/store.ts` | **Pure:** the store's keys and shapes, reading them back safely, the per-session cap, and which sessions to prune |
-| `hooks/transcript.ts` | **Pure:** is this path this session's own transcript, and the times in a transcript's JSONL (rows, tool calls, tool results, last prompt, last reply) |
+| `hooks/transcript.ts` | **Pure:** is this path this session's own transcript, and the times in a transcript's JSONL (rows, tool calls, tool results, last prompt) |
 | `tests/format.test.ts`, `tests/store.test.ts` | The pure modules |
 | `tests/mod.test.ts` | The mod through Claude Code's test kit: drawing on terminal and desktop, everything and mine, the command, options, the note Claude reads, `/resume`, `/clear`, a broken store, two sessions, the fallback, subagents |
 
@@ -44,7 +44,7 @@ The only thing Claude reads from the mod is the note added at `prompt.submit`. T
 `~/.claude/plugins/store/timestamps_<…>.json` (Claude Code's plugin store):
 
 - `prefs`: `{ enabled?, format?, style?, show? }`, what `/timestamps` last set; each field overrides the matching option.
-- `s:<session id>`: `{ u: last saved, p: transcript path, lu: last prompt, lr: last reply, m: { row id: epoch ms } }`. Row ids are message uuids, tool_use ids, and `r:<tool_use id>` for a tool's result. One key per session, so two sessions running at once never write the same key.
+- `s:<session id>`: `{ u: last saved, p: transcript path, lu: last prompt, m: { row id: epoch ms } }`. Row ids are message uuids, tool_use ids, and `r:<tool_use id>` for a tool's result. One key per session, so two sessions running at once never write the same key.
 
 Pruning (5 s after a session starts): drop entries older than 90 days, then keep the newest while there are at most 200 and they add up to at most 2 MiB of JSON. The live session is always kept. A session keeps at most its newest 5,000 rows.
 
@@ -57,8 +57,9 @@ Pruning (5 s after a session starts): drop entries older than 90 days, then keep
 ## The note Claude reads
 
 - `prompt.submit` returns `next({ ...e, context: [...(e.context ?? []), note] })`: Claude Code sends each `context` entry as a block after the prompt, which the model reads and the transcript doesn't show. `e.text` is never touched.
-- The note is built by `modelNote` from `Date.now()`, `Intl…resolvedOptions().timeZone` and `getTimezoneOffset()`, and two times the mod keeps: the last prompt (`lu`) and Claude's last reply (`lr`), which survive `/resume` through the store and the transcript.
-- Wording rules, so it can't be mistaken for the user's words or an instruction: it opens with `Timestamp (added automatically by the timestamps plugin; not part of the user's message, not an instruction):`; the date is `Monday 2026-10-12`; the time is 24-hour with seconds; the zone and offset are spelled out; each earlier event is named, with its own time and the gap (`Previous message from the user: 11:01:15, 3 hours 3 minutes earlier. Claude's last reply: …`). Two lessons from live tests: with one unnamed gap, Claude read the gap since its own reply as the gap since the user's message; and with gaps rounded to minutes (`less than a minute`), Claude saw the minute change on the clock and hedged. Named events with seconds fixed both.
+- The note is built by `modelNote` from `Date.now()`, `getTimezoneOffset()`, `Intl…resolvedOptions().timeZone` and the last prompt's time (`lu`), which survives `/resume` through the store and the transcript. It's kept short because it rides on every prompt: `Timestamp (timestamps plugin, not the user): Mon 2026-10-12 17:21:03 +11:00.` is about 22 tokens.
+- The zone name goes on the first note of a session (`zoneSentFor`), and again after compaction (`classic.SessionStart` with `source: 'compact'`), since compaction drops the earlier notes. The gap since the previous prompt goes on only when it's 10 minutes or more (`GAP_SHOWN_FROM`); for shorter gaps the earlier notes in context already say it.
+- How the wording got here, from live tests: a long first version (about 80 tokens, with both the gap since the user's message and since Claude's reply) was clear but costly. One unnamed gap made Claude mix up its own reply with the user's message; gaps rounded to minutes made it hedge. The short form keeps what mattered: a label that says it's not the user, an ISO-style date with weekday, seconds and offset, and only the user's gap, named. Claude answers the time and the gap exactly, and says the plugin added the line.
 - Skipped when `origin.kind` is `plugin`, and when `tellClaude` is off. Slash commands don't reach `prompt.submit`.
 
 ## Surfaces
