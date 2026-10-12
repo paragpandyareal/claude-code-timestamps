@@ -11,8 +11,8 @@
     {
       "name": "timestamps",
       "source": "./",
-      "description": "Times on everything in the conversation, 'replied 14:07 · took 1m 48s' on each turn, and the time with each prompt so Claude knows how much time has passed.",
-      "version": "0.3.0"
+      "description": "Times on everything in Claude Code: your messages, replies, tool calls and 'replied 14:07 · took 1m 48s' on each turn. Optional: let Claude know the time too.",
+      "version": "0.4.0"
     }
   ]
 }

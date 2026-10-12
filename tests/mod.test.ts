@@ -173,18 +173,18 @@ describe('options and /timestamps', () => {
     }
     const run = async (args: string) => (await $.command.run({ command: 'timestamps', args, origin: { kind: 'composer' }, presentation: { isFullscreen: true, columns: 80 } } as never)).text
 
-    expect(await run('')).toBe('off')
+    expect(await run('')).toBe('off · Claude not told the time')
     expect(await shown()).toEqual(['ENGINE:UserMessage'])
-    expect(await run('')).toBe('on · 24h · clock · everything')
+    expect(await run('')).toBe('on · 24h · clock · everything · Claude not told the time')
     expect((await shown())[1]).toMatch(/^  \d{2}:\d{2}$/)
-    expect(await run('12h')).toBe('on · 12h · clock · everything')
+    expect(await run('12h')).toBe('on · 12h · clock · everything · Claude not told the time')
     expect((await shown())[1]).toMatch(/^  \d{1,2}:\d{2} [AP]M$/)
-    expect(await run('relative')).toBe('on · 12h · relative · everything')
+    expect(await run('relative')).toBe('on · 12h · relative · everything · Claude not told the time')
     expect((await shown())[1]).toBe('  just now')
-    expect(await run('mine')).toBe('on · 12h · relative · your messages')
+    expect(await run('mine')).toBe('on · 12h · relative · your messages · Claude not told the time')
     expect(w.store.get('prefs')).toEqual({ format: '12h', style: 'relative', show: 'mine', enabled: true })
-    expect(await run('all')).toBe('on · 12h · relative · everything')
-    expect(await run('reset')).toBe('on · 24h · clock · everything')
+    expect(await run('all')).toBe('on · 12h · relative · everything · Claude not told the time')
+    expect(await run('reset')).toBe('on · 24h · clock · everything · Claude not told the time')
     expect(await run('purple')).toMatch(/^usage:/)
   })
 
@@ -193,7 +193,7 @@ describe('options and /timestamps', () => {
 describe('what Claude reads', () => {
   const submit = ($: any, kind: string, text = 'hello') => $.prompt.submit({ text, wait: false, origin: { kind } })
 
-  test('a short timestamp beside my prompt; my words unchanged; zone named once', async ($, on) => {
+  test('a short timestamp beside my prompt; my words unchanged; zone named once', { options: { tellClaude: true } }, async ($, on) => {
     const seen: any[] = []
     world(on)
     on('prompt.submit', async (_$, e) => (seen.push(e), { text: e.text, context: e.context }) as never)
@@ -206,7 +206,7 @@ describe('what Claude reads', () => {
     expect(seen[1].context[0]).toMatch(/^Timestamp \(timestamps plugin, not the user\): \w{3} \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [+-]\d{2}:\d{2}\.$/)
   })
 
-  test('notifications get the note too; other plugins\' prompts get nothing', async ($, on) => {
+  test('notifications get the note too; other plugins\' prompts get nothing', { options: { tellClaude: true } }, async ($, on) => {
     const seen: any[] = []
     world(on)
     on('prompt.submit', async (_$, e) => (seen.push(e), { text: e.text, context: e.context }) as never)
@@ -215,6 +215,31 @@ describe('what Claude reads', () => {
     await submit($, 'plugin')
     expect(seen[0].context[0]).toMatch(/^Timestamp \(timestamps plugin, not the user\): /)
     expect(seen[1].context).toBe(undefined)
+  })
+
+  test('off by default: Claude reads nothing from the mod', async ($, on) => {
+    const seen: any[] = []
+    world(on)
+    on('prompt.submit', async (_$, e) => (seen.push(e), { text: e.text }) as never)
+    await start($)
+    await submit($, 'composer')
+    expect(seen[0].context).toBe(undefined)
+  })
+
+  test('/timestamps claude on and off', async ($, on) => {
+    const seen: any[] = []
+    world(on)
+    on('prompt.submit', async (_$, e) => (seen.push(e), { text: e.text, context: e.context }) as never)
+    await start($)
+    const run = async (args: string) => (await $.command.run({ command: 'timestamps', args, origin: { kind: 'composer' }, presentation: { isFullscreen: true, columns: 80 } } as never)).text
+    expect(await run('claude on')).toMatch(/^Claude is now told the time with each prompt: a short note \(about 22 tokens\) sent to Anthropic/)
+    await submit($, 'composer')
+    expect(seen[0].context[0]).toMatch(/^Timestamp \(timestamps plugin, not the user\): /)
+    expect(await run('claude')).toBe('Claude is no longer told the time. Times on screen are unchanged.')
+    await submit($, 'composer')
+    expect(seen[1].context).toBe(undefined)
+    expect(await run('claude on')).toMatch(/^Claude is now/)
+    expect(await run('reset')).toMatch(/ · Claude not told the time$/)
   })
 
   test('tellClaude off adds nothing', { options: { tellClaude: false } }, async ($, on) => {

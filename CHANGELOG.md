@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0 (2026-10-12)
+
+- **Telling Claude the time is now off by default.** Out of the box, the mod adds nothing to what Claude reads. Turn it on with the new `/timestamps claude on` (or the *Tell Claude the time* option); `/timestamps claude off` turns it off. **When on, it costs about 22 tokens per prompt**, and the README, the option, and the command's reply all say so.
+- `/timestamps` status now ends with whether Claude is told the time.
+
 ## 0.3.0 (2026-10-12)
 
 - **A much shorter note for Claude: about 22 tokens a prompt instead of about 80** (20 prompts: about 450 tokens instead of 1,600). It now reads `Timestamp (timestamps plugin, not the user): Mon 2026-10-12 17:21:03 +11:00.`

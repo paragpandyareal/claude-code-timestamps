@@ -14,7 +14,7 @@ import type { HourFormat, Show, Style } from './format'
 export const PREFS_KEY = 'prefs'
 export const SESSION_PREFIX = 's:'
 
-export type StoredPrefs = { enabled?: boolean; format?: HourFormat; style?: Style; show?: Show }
+export type StoredPrefs = { enabled?: boolean; format?: HourFormat; style?: Style; show?: Show; tellClaude?: boolean }
 
 /** `lu`: the user's last prompt, for the gap in Claude's note. */
 export type SessionRecord = { u: number; p?: string; lu?: number; m: Record<string, number> }
@@ -37,6 +37,7 @@ export function readPrefs(v: unknown): StoredPrefs {
   if (o.format === '12h' || o.format === '24h') out.format = o.format
   if (o.style === 'clock' || o.style === 'relative') out.style = o.style
   if (o.show === 'everything' || o.show === 'mine') out.show = o.show
+  if (typeof o.tellClaude === 'boolean') out.tellClaude = o.tellClaude
   return out
 }
 

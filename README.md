@@ -2,10 +2,10 @@
 
 # Timestamps for Claude Code
 
-**See when everything happened. Let Claude know the time too.** 🕑
+**See when everything happened. Optionally, let Claude know the time too.** 🕑
 
 A Claude Code mod that adds the time to your conversation, the way it would look if Claude Code had it built in.<br>
-A dim time under every message, reply, tool call and command, `replied 14:07 · took 1m 48s` on the line that closes each turn, and a short timestamp with each prompt so Claude knows what time it is and how long it's been.
+A dim time under every message, reply, tool call and command, `replied 14:07 · took 1m 48s` on the line that closes each turn, and, if you turn it on, a short timestamp with each prompt so Claude knows what time it is and how long it's been.
 
 [![MIT licence](https://img.shields.io/badge/licence-MIT-8B5CF6)](LICENSE)
 [![Claude Code mod](https://img.shields.io/badge/Claude%20Code-mod-2DD4BF)](#install)
@@ -23,7 +23,7 @@ A dim time under every message, reply, tool call and command, `replied 14:07 · 
 
 **3. Each turn's closing line shows when Claude replied and how long it took.** Claude Code's own `✻ Baked for 1m 48s` becomes `✻ replied 14:07 · took 1m 48s`.
 
-**4. Claude knows the time.** Each prompt you send carries one short timestamp that only Claude reads (see [What Claude sees](#what-claude-sees)), so Claude knows the date, the time, your time zone, and how long it's been since you last wrote. Your words are never changed.
+**4. Optional, off by default: let Claude know the time.** Type `/timestamps claude on` and each prompt you send carries one short timestamp that only Claude reads, so Claude knows the date, the time, your time zone, and how long it's been since you last wrote. **It costs about 22 tokens per prompt** (see [What Claude sees](#what-claude-sees)). Your words are never changed.
 
 ![A real Claude Code session with the mod: a dim time under each message, tool call and reply, "replied 14:51 · took 11s" closing the turn, and Claude answering exactly what time it is and how long since the last message](docs/images/session.png)
 
@@ -71,7 +71,12 @@ A row with no recorded time shows nothing, never a guess.
 
 ## What Claude sees
 
-When you send a prompt, Claude reads your words exactly as you typed them, and then one short note, added by the mod. The first prompt of a session:
+> [!IMPORTANT]
+> **Off by default.** Nothing is sent to Claude unless you turn it on with `/timestamps claude on` (or the *Tell Claude the time* option).
+>
+> **Token cost when it's on: about 22 tokens per prompt** (about 35 on the first prompt of a session, or after a gap of 10 minutes or more). **Twenty prompts cost about 450 tokens.** The note goes to Anthropic with your prompt, like everything else you send.
+
+When it's on, Claude reads your words exactly as you typed them, and then one short note, added by the mod. The first prompt of a session:
 
 ```text
 Timestamp (timestamps plugin, not the user): Mon 2026-10-12 15:13:17 +11:00, Australia/Sydney.
@@ -83,7 +88,6 @@ After that, just the time, and how long it's been when it's been a while:
 Timestamp (timestamps plugin, not the user): Mon 2026-10-12 17:21:03 +11:00. 3h 16m after the user's previous message.
 ```
 
-- **It's small.** About 22 tokens per prompt (about 35 on the first, or after a long gap). Twenty prompts cost about 450 tokens.
 - **It says what it is.** It's labelled as a timestamp from this plugin, not your words, so Claude doesn't answer it or act on it. Asked, Claude says the plugin added it.
 - **It can't be misread.** The date is written `2026-10-12` with the weekday, the time in 24-hour form with seconds, and the UTC offset.
 - **Your time zone's name** (`Australia/Sydney`) is sent once per session, on the first prompt, and again after the conversation is compacted.
@@ -92,7 +96,7 @@ Timestamp (timestamps plugin, not the user): Mon 2026-10-12 17:21:03 +11:00. 3h 
 - **Not added to** slash commands or prompts other plugins send.
 - **You don't see it in the transcript.** It's sent as context beside your prompt, the way Claude Code adds its own reminders.
 - **It goes where your prompt goes:** to Anthropic, under your account, as part of the conversation. It holds the time, the UTC offset, your time zone's name (once), and sometimes the gap since your previous message. Nothing else.
-- **Turn it off** with the *Tell Claude the time* option (`tellClaude: false`). The times on screen keep working.
+- **Turn it on or off** with `/timestamps claude on` / `/timestamps claude off`, or the *Tell Claude the time* option. It's off until you do. The times on screen work either way.
 
 ## Install
 
@@ -117,6 +121,9 @@ Or, in two steps:
 
 If Claude Code says *userConfig options not yet set*, that's fine: every option has a default (below), and you can change them later.
 
+> [!NOTE]
+> Out of the box, Claude isn't told the time: the mod only draws on your screen and adds nothing to what Claude reads. To let Claude know the time, type `/timestamps claude on`. **That costs about 22 tokens per prompt.** See [What Claude sees](#what-claude-sees).
+
 ## Use it
 
 | To… | Type |
@@ -126,9 +133,10 @@ If Claude Code says *userConfig options not yet set*, that's fine: every option 
 | `14:05` or `2:05 PM` | `/timestamps 24h`, `/timestamps 12h` |
 | `14:05` or `5m ago` | `/timestamps clock`, `/timestamps relative` |
 | Times on every row, or only under your messages | `/timestamps all`, `/timestamps mine` |
+| Let Claude know the time (**off by default, about 22 tokens per prompt**) | `/timestamps claude on`, `/timestamps claude off` |
 | Go back to your options | `/timestamps reset` |
 
-Your choice is remembered in every session until you change it. Relative times count up once a minute; older than today, they show the date instead. `/timestamps off` hides the times on screen; to stop the note Claude reads, use the *Tell Claude the time* option.
+Your choice is remembered in every session until you change it. Relative times count up once a minute; older than today, they show the date instead. `/timestamps off` hides the times on screen. Whether Claude is told the time is separate: `/timestamps claude on` or `off`.
 
 ### Options
 
@@ -140,7 +148,7 @@ Set them when you install, or any time with `/plugin configure timestamps@claude
 | Style (`style`) | `clock` | `clock` (`14:05`) or `relative` (`5m ago`) |
 | Where times appear (`show`) | `everything` | `everything`, or `mine` for your own messages only |
 | Show turn duration (`showDuration`) | on | Adds `took …` to the closing line and to tool calls |
-| Tell Claude the time (`tellClaude`) | on | Adds the [timestamp note](#what-claude-sees) beside each prompt |
+| Tell Claude the time (`tellClaude`) | **off** | Adds the [timestamp note](#what-claude-sees) beside each prompt. **About 22 tokens per prompt**, sent to Anthropic with it. Same as `/timestamps claude on`. |
 | Fill in older messages (`backfill`) | on | On `/resume` and `/branch`, reads this session's own transcript to show times for rows from before the mod loaded |
 
 ## Where times are kept
@@ -154,7 +162,7 @@ Times survive `/resume`, `/branch`, `/clear` (the new conversation starts fresh)
 - **More lines on screen.** With `everything`, each reply block, tool call and command gets one more line. `/timestamps mine` goes back to times under your messages only.
 - **Older rows are filled in on resume.** Rows from before the mod loaded get their times from the session's own transcript when you `/resume` or `/branch`, or when the mod reloads. If you install it partway through a session, that session's earlier rows show no time until you resume it.
 - **Transcripts over 4 MB aren't read.** Claude Code lets a mod read at most 4 MB from one file. For a very long session, rows from before the mod loaded show no time. Rows recorded while the mod was running always keep theirs. Nothing is shown as an error.
-- **Claude knows the time when you send a prompt,** not as each tool finishes inside a long turn. A turn that runs for an hour still has the time it started.
+- **When it's turned on, Claude knows the time when you send a prompt,** not as each tool finishes inside a long turn. A turn that runs for an hour still has the time it started.
 - **The fallback line is labelled.** Where nothing is drawn, Claude Code puts the mods' names in front of a mod's line, so it reads `timestamps: sent 14:05 · replied 14:07 · took 1m 48s`. Plain `claude -p` output is unchanged, so scripts that read it aren't affected; the line goes into the session's transcript.
 - **Subagents.** A subagent's own prompts and replies aren't shown in the main conversation, so they get no time. Its tool calls get one.
 - **Time zone.** Times use the time zone of the computer Claude Code runs on. Over SSH, that's the server's (set `TZ` to change it, for example `TZ=Australia/Sydney claude`). The note Claude reads uses the same zone.
@@ -170,7 +178,7 @@ Times survive `/resume`, `/branch`, `/clear` (the new conversation starts fresh)
 | `/timestamps` doesn't exist | Your Claude Code is older than v2.1.287. Run `claude --version` and update. |
 | The times are an hour or more out | Claude Code is using your computer's (or server's) time zone. Set `TZ`, as above. |
 | Older rows have no time | See *Older rows* and *Transcripts over 4 MB* above. Try `/resume` on that session. |
-| Claude still doesn't seem to know the time | Check *Tell Claude the time* is on (`/plugin configure timestamps@claude-code-timestamps`). The note is read with each new prompt. |
+| Claude doesn't know the time | It's off by default. Type `/timestamps claude on` (about 22 tokens per prompt). The note is read with each new prompt. |
 | Something else | Open an issue (see [Support](#support)) with your Claude Code version, operating system and terminal. |
 
 ## Permissions and data
@@ -180,14 +188,14 @@ Timestamps is a Claude Code *mod*: code that runs inside Claude Code with your u
 | It… | When | Why |
 |---|---|---|
 | Notes the time each row is added to the conversation: your prompts, Claude's reply blocks, tool calls and results, commands, and the turn's closing line. It reads each row's id, type and who sent it, and the ids of tool calls inside it. **Never the words.** | As each row is added | So it can show the time |
-| Adds the [timestamp note](#what-claude-sees) beside your prompt, for Claude | Each time you send a prompt, unless *Tell Claude the time* is off | So Claude knows the time |
+| Adds the [timestamp note](#what-claude-sees) beside your prompt, for Claude (about 22 tokens) | **Only if you turned it on** (`/timestamps claude on`); off by default | So Claude knows the time |
 | Saves ids and times in its own entry in Claude Code's plugin store | Half a second after a change, and when a session ends | So times survive restarts and `/resume` |
 | Reads this session's own transcript file, and only that file | On `/resume`, `/branch` and reloads, if *Fill in older messages* is on | To fill in times for rows from before the mod loaded |
 | Draws a dim line under rows and rewrites the turn's closing line | When Claude Code draws them | To show the times |
 | Adds one line after each turn | Only where nothing is drawn (`claude -p`, the VS Code chat panel) | So those users get times too |
 | Deletes its own oldest entries | Five seconds after a session starts | To stay under 2 MiB |
 
-It never makes network requests, starts no programs, writes no files, calls no model, reads no environment variables, and adds no tools to Claude. The only thing it adds to what Claude reads is the timestamp note. It has no telemetry or accounts.
+It never makes network requests, starts no programs, writes no files, calls no model, reads no environment variables, and adds no tools to Claude. Out of the box it adds nothing to what Claude reads; the timestamp note is sent only if you turn it on. It has no telemetry or accounts.
 
 ### Exactly what the mod hooks, calls and reads
 
@@ -201,7 +209,7 @@ This section is for anyone reviewing the code, including Anthropic's directory r
 | `classic.SessionStart` | Reads the session's id and transcript path after startup, `/clear`, `/resume`, `/branch` and compaction. On `/resume` and `/branch`, fills in from that transcript. |
 | `session.end` | Saves this session's times |
 | `session.append` | Notes the time of a row by its id. It reads the row's door, type, id and origin, and (for Claude's replies and tool results) the tool-call ids in it. It never reads or changes the text. |
-| `prompt.submit` | **Adds one entry to the prompt's `context`: the timestamp note.** It never changes `text` (your words). Skipped for prompts other plugins send, and when *Tell Claude the time* is off. Slash commands don't pass through it. |
+| `prompt.submit` | **Adds one entry to the prompt's `context`: the timestamp note.** It never changes `text` (your words). **Off by default:** it does this only after you turn on *Tell Claude the time* (`/timestamps claude on`). Skipped for prompts other plugins send. Slash commands don't pass through it. |
 | `turn.complete` | For the main conversation only, and only where nothing is drawn: adds `sent … · replied … · took …` as the line after the answer. Everywhere else it returns the answer unchanged. |
 | `ui.render` for `UserMessage`, `AssistantMessage`, `ToolUse`, `ToolGroup`, `CommandOutput` | Draws Claude Code's own row with one dim line under it. Rows with no known time, and (with `mine`) every row but your own messages, are left exactly as Claude Code draws them. An expanded tool group is left alone, since each call in it has its own row. |
 | `ui.render` for `TurnDuration` | Replaces the text of the turn's closing line with `✻ replied … · took …` |
@@ -219,7 +227,7 @@ This section is for anyone reviewing the code, including Anthropic's directory r
 
 **What it writes.** Only its own entries in Claude Code's plugin store. No files.
 
-**What it sends to Claude.** Only the timestamp note, beside each prompt you send, built from the clock, your computer's time zone and the time of your previous prompt. Never anything from a file or another message.
+**What it sends to Claude.** Nothing, unless you turn on *Tell Claude the time*. Then only the timestamp note (about 22 tokens), beside each prompt you send, built from the clock, your computer's time zone and the time of your previous prompt. Never anything from a file or another message.
 
 **Credentials.** It reads none, and no environment variables.
 
@@ -229,7 +237,7 @@ This section is for anyone reviewing the code, including Anthropic's directory r
 
 | Likely finding | What the mod does |
 |---|---|
-| Adds context to a prompt (`prompt.submit`) | One short fixed-form line, built only from the clock, the system time zone and the previous prompt's time, labelled as a timestamp from this plugin and not the user's. Never changes the typed text; skipped for other plugins' prompts; off with one option. Shown word for word in the README. |
+| Adds context to a prompt (`prompt.submit`) | Off by default; only after the person turns it on. One short fixed-form line, built only from the clock, the system time zone and the previous prompt's time, labelled as a timestamp from this plugin and not the user's. Never changes the typed text; skipped for other plugins' prompts; off with one option. Shown word for word in the README. |
 | Reads a file (`fs.read`) | Only this session's own transcript, by the path Claude Code hands its `SessionStart` hook, and only when the file's name is `<this session id>.jsonl`. It reads ids and times from it. Off with one option. |
 | Hooks an event that can refuse (`session.append`, `classic.SessionStart`) | Observes only: notes a time and passes the row on unchanged; its `.catch` passes it on if anything fails. It never answers in place of `next`. |
 | Changes a turn's answer (`turn.complete`) | Only where nothing is drawn, and only by adding a line under the answer. Claude Code never rewrites the stored answer, and plain `claude -p` output is unchanged. |
@@ -238,7 +246,7 @@ This section is for anyone reviewing the code, including Anthropic's directory r
 
 ### Things to know
 - **Times are kept on your computer**, as ids and times only, never your words. Uninstalling and the step below remove them.
-- **Claude reads the timestamp note** with every prompt (about 22 tokens), and it goes to Anthropic as part of the conversation, like the date Claude Code already sends. Once a session it includes your time zone's name (for example `Australia/Sydney`). Turn it off with *Tell Claude the time*.
+- **If you turn on *Tell Claude the time*,** Claude reads the timestamp note with every prompt (**about 22 tokens each**), and it goes to Anthropic as part of the conversation, like the date Claude Code already sends. Once a session it includes your time zone's name (for example `Australia/Sydney`). It's off by default; `/timestamps claude off` turns it off again.
 - **The times are when Claude Code stored each row.** For your prompt, that's the moment you pressed Enter.
 
 ## Privacy
@@ -247,7 +255,7 @@ Full policy: [Privacy policy](PRIVACY.md).
 
 - The plugin collects nothing and sends nothing to its author or anyone else.
 - It keeps row ids and times on your own computer, never message text.
-- It adds one short timestamp note to each prompt for Claude (the time, the UTC offset, your time zone's name once a session, and the gap since your last message when it's long), which goes to Anthropic with your prompt. You can turn it off.
+- Only if you turn it on (off by default), it adds one short timestamp note to each prompt for Claude (about 22 tokens: the time, the UTC offset, your time zone's name once a session, and the gap since your last message when it's long), which goes to Anthropic with your prompt.
 
 ## Not in version one
 

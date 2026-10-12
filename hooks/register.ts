@@ -40,7 +40,7 @@ let own: Record<string, number> = {}
 let sessionId: string | undefined
 let transcriptPath: string | undefined
 let stored: StoredPrefs = {}
-let opt: Options = { format: 'auto', style: 'clock', showDuration: true, show: 'everything', tellClaude: true, backfill: true }
+let opt: Options = { format: 'auto', style: 'clock', showDuration: true, show: 'everything', tellClaude: false, backfill: true }
 let systemFormat: HourFormat = '24h'
 let drawsUI = true
 let lastPromptAt: number | undefined
@@ -52,7 +52,7 @@ let flushTimer: { cancel: () => void } | undefined
 let tickTimer: { cancel: () => void } | undefined
 let backfilledFor: string | undefined
 
-const HELP = 'usage: /timestamps [on|off|12h|24h|clock|relative|all|mine|reset]'
+const HELP = 'usage: /timestamps [on|off|12h|24h|clock|relative|all|mine|claude on|claude off|reset]'
 
 function readOptions(o: PluginOptions): Options {
   return {
@@ -60,13 +60,19 @@ function readOptions(o: PluginOptions): Options {
     style: o.style === 'relative' ? 'relative' : 'clock',
     showDuration: o.showDuration !== false,
     show: o.show === 'mine' ? 'mine' : 'everything',
-    tellClaude: o.tellClaude !== false,
+    // Off unless the person turns it on: it adds to what Claude reads.
+    tellClaude: o.tellClaude === true,
     backfill: o.backfill !== false,
   }
 }
 
 function show(): Show {
   return stored.show ?? opt.show
+}
+
+/** Whether Claude is told the time: off unless the person turned it on. */
+function tellClaude(): boolean {
+  return stored.tellClaude ?? opt.tellClaude
 }
 
 function prefs(): Prefs {
@@ -204,7 +210,16 @@ async function setPrefs($: EngineInterface, arg: string): Promise<string> {
   else if (arg === 'all' || arg === 'everything') next = { ...stored, show: 'everything', enabled: true }
   else if (arg === 'mine') next = { ...stored, show: 'mine', enabled: true }
   else if (arg === 'reset') next = {}
-  else return HELP
+  else if (arg === 'claude' || arg === 'claude on' || arg === 'claude off') {
+    const on = arg === 'claude' ? !tellClaude() : arg === 'claude on'
+    stored = { ...stored, tellClaude: on }
+    try {
+      await $.store.set(PREFS_KEY, stored)
+    } catch {}
+    return on
+      ? 'Claude is now told the time with each prompt: a short note (about 22 tokens) sent to Anthropic with your prompt. /timestamps claude off to stop.'
+      : 'Claude is no longer told the time. Times on screen are unchanged.'
+  } else return HELP
   stored = next
   try {
     await $.store.set(PREFS_KEY, stored)
@@ -212,7 +227,8 @@ async function setPrefs($: EngineInterface, arg: string): Promise<string> {
   schedule($)
   $.ui.invalidate('ui.render')
   const p = prefs()
-  return p.enabled ? `on · ${p.format} · ${p.style} · ${show() === 'mine' ? 'your messages' : 'everything'}` : 'off'
+  const claude = tellClaude() ? 'Claude told the time' : 'Claude not told the time'
+  return (p.enabled ? `on · ${p.format} · ${p.style} · ${show() === 'mine' ? 'your messages' : 'everything'}` : 'off') + ' · ' + claude
 }
 
 export const register: Register = (on, options) => {
@@ -225,8 +241,8 @@ export const register: Register = (on, options) => {
     try {
       await $.command.register({
         name: 'timestamps',
-        description: 'Show or hide times, switch 12h/24h, clock/relative, or all rows/your messages only',
-        argumentHint: '[on|off|12h|24h|clock|relative|all|mine|reset]',
+        description: 'Show or hide times (12h/24h, clock/relative, all/mine), and choose whether Claude is told the time',
+        argumentHint: '[on|off|12h|24h|clock|relative|all|mine|claude on|claude off|reset]',
         immediate: true,
       })
       stored = readPrefs(await $.store.get(PREFS_KEY))
@@ -289,7 +305,7 @@ export const register: Register = (on, options) => {
   // saying when it was sent. The words you typed are never changed.
   on('prompt.submit', ($, e, next) => {
     try {
-      if (!opt.tellClaude || e.origin.kind === 'plugin') return next(e)
+      if (!tellClaude() || e.origin.kind === 'plugin') return next(e)
       const now = Date.now()
       const note = modelNote(now, lastUserAt, zoneSentFor !== sessionId)
       zoneSentFor = sessionId

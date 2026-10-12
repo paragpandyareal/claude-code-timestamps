@@ -1,8 +1,8 @@
 {
   "name": "timestamps",
   "displayName": "Timestamps",
-  "version": "0.3.0",
-  "description": "Times on everything in the conversation, 'replied 14:07 · took 1m 48s' on each turn, and the time with each prompt so Claude knows how much time has passed.",
+  "version": "0.4.0",
+  "description": "Times on everything in Claude Code: your messages, replies, tool calls and 'replied 14:07 · took 1m 48s' on each turn. Optional: let Claude know the time too.",
   "author": {
     "name": "Parag Pandya",
     "url": "https://github.com/paragpandyareal"
@@ -67,9 +67,9 @@
     },
     "tellClaude": {
       "type": "boolean",
-      "title": "Tell Claude the time",
-      "description": "Add one sentence beside each prompt, read by Claude only, saying when it was sent and how long since the previous message. Your words are never changed",
-      "default": true
+      "title": "Tell Claude the time (off by default)",
+      "description": "Off by default. When on, adds a short timestamp note (about 22 tokens) beside each prompt, read by Claude only and sent to Anthropic with your prompt. Your words are never changed. Also: /timestamps claude on",
+      "default": false
     }
   },
   "privacyPolicyUrl": "https://github.com/paragpandyareal/claude-code-timestamps/blob/main/PRIVACY.md",

@@ -56,6 +56,8 @@ Pruning (5 s after a session starts): drop entries older than 90 days, then keep
 
 ## The note Claude reads
 
+- **Off by default** (`tellClaude: false`). The person turns it on with `/timestamps claude on` (kept in `prefs.tellClaude`) or the option. About 22 tokens per prompt.
+
 - `prompt.submit` returns `next({ ...e, context: [...(e.context ?? []), note] })`: Claude Code sends each `context` entry as a block after the prompt, which the model reads and the transcript doesn't show. `e.text` is never touched.
 - The note is built by `modelNote` from `Date.now()`, `getTimezoneOffset()`, `Intl…resolvedOptions().timeZone` and the last prompt's time (`lu`), which survives `/resume` through the store and the transcript. It's kept short because it rides on every prompt: `Timestamp (timestamps plugin, not the user): Mon 2026-10-12 17:21:03 +11:00.` is about 22 tokens.
 - The zone name goes on the first note of a session (`zoneSentFor`), and again after compaction (`classic.SessionStart` with `source: 'compact'`), since compaction drops the earlier notes. The gap since the previous prompt goes on only when it's 10 minutes or more (`GAP_SHOWN_FROM`); for shorter gaps the earlier notes in context already say it.
